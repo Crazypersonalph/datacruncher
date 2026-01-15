@@ -26,11 +26,11 @@ parser.add_argument('--year-range', type=int, nargs=2, help='Year range to analy
 
 args = parser.parse_args()
 
+# Create an empty pandas dataframe with all the columns we need
 df = pd.DataFrame(columns=["Index", "Team", "Year", "Max Alliance Points", "Rank", "Max Points scored % Qualis", "Max Points scored % Playoffs",
                            "Median Points scored % Qualis", "Median Points scored % Playoffs",
                            "OPR", "DPR", "CCWM", "Win Rate"]).set_index("Index")
 
-max_alliance_points: dict[int, int] = {2023: 217, 2024: 192, 2025: 301}
 
 finals: list[model.CompLevel] = [model.CompLevel.f, model.CompLevel.sf, model.CompLevel.ef, model.CompLevel.qf]
 
@@ -99,9 +99,10 @@ def get_team_rank(team: str, event: str) -> Optional[dict[str, int]]:
 def team_db(team: str, event_specific_code: str) -> None:
     for i in range(args.year_range[1] - args.year_range[0] + 1):
         year = args.year_range[0] + i
+        year_max = get_year_max(year)
 
         event_code = f"{year}{event_specific_code}"
-        row = [team, year, max_alliance_points[year], None, None, None, None, None, None, None, None, None]
+        row = [team, year, year_max, None, None, None, None, None, None, None, None, None]
 
         
         rank = get_team_rank(team, event_code)
@@ -118,14 +119,14 @@ def team_db(team: str, event_specific_code: str) -> None:
         # Quals
         quals_scores = get_team_score(team, event_code, [model.CompLevel.qm])
         if quals_scores:
-            row[4] = (max(quals_scores) / max_alliance_points[year]) * 100
-            row[6] = (median(sorted(quals_scores)) / max_alliance_points[year]) * 100
+            row[4] = (max(quals_scores) / year_max) * 100
+            row[6] = (median(sorted(quals_scores)) / year_max) * 100
 
         # Playoffs
         playoffs_scores = get_team_score(team, event_code, finals)
         if playoffs_scores:
-            row[5] = (max(playoffs_scores) / max_alliance_points[year]) * 100
-            row[7] = (median(sorted(playoffs_scores)) / max_alliance_points[year]) * 100
+            row[5] = (max(playoffs_scores) / year_max) * 100
+            row[7] = (median(sorted(playoffs_scores)) / year_max) * 100
 
         # OPR, DPR, CCWM, and Win Rate
         event_stats: Optional[model.EventOPRs] = cast(Optional[model.EventOPRs], tba.event_oprs(event_code))
