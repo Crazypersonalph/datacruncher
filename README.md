@@ -4,6 +4,8 @@ Please note that I have made some custom changes to tbapy because it hasn't been
 
 However the changes are pretty simple and easy to implement, so that has been left as an exercise for the reader
 
+There is also a .env with `X-TBA-AUTH-KEY` which is, you guessed it, populated with the TBA API key.
+
 ```
 usage: Alphons's small FIRST data cruncher [-h] -t TEAMS [TEAMS ...] -e EVENTCODE [-o OUTPUT] [--year-range YEAR_RANGE YEAR_RANGE]
 
