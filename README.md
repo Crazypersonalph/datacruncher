@@ -6,6 +6,8 @@ However the changes are pretty simple and easy to implement, so that has been le
 
 There is also a .env with `X-TBA-AUTH-KEY` which is, you guessed it, populated with the TBA API key.
 
+If the program can't find max score data for a year, it will default to 100. This is most notable in 2021 Infinite Recharge due to COVID.
+
 ```
 usage: Alphons's small FIRST data cruncher [-h] -t TEAMS [TEAMS ...] -e EVENTCODE [-o OUTPUT] [--year-range YEAR_RANGE YEAR_RANGE]
 

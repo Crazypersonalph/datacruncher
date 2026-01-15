@@ -34,14 +34,14 @@ df = pd.DataFrame(columns=["Index", "Team", "Year", "Max Alliance Points", "Rank
 
 finals: list[model.CompLevel] = [model.CompLevel.f, model.CompLevel.sf, model.CompLevel.ef, model.CompLevel.qf]
 
-def get_year_max(year: int) -> int:
+def get_year_max(year: int) -> Optional[int]:
     leaderboardInsight: list[model.LeaderboardInsight] = cast(list[model.LeaderboardInsight], tba.insights_leaderboards(year))
-    max_value: int = 0
+    max_value: Optional[int] = None
     for insight in leaderboardInsight:
         real_insight = model.LeaderboardInsight.model_validate(insight)
         if real_insight.name == "typed_leaderboard_highest_match_clean_score":
             for entry in real_insight.data.rankings:
-                if entry.value > max_value:
+                if max_value is None or entry.value > max_value:
                     max_value = int(entry.value)
     return max_value
 
@@ -99,7 +99,11 @@ def get_team_rank(team: str, event: str) -> Optional[dict[str, int]]:
 def team_db(team: str, event_specific_code: str) -> None:
     for i in range(args.year_range[1] - args.year_range[0] + 1):
         year = args.year_range[0] + i
+
         year_max = get_year_max(year)
+        if year_max is None:
+            print(f"Warning: No max score data available for year {year}. Using fallback value of 100.")
+            year_max = 100  # Fallback to 100 if no data is available
 
         event_code = f"{year}{event_specific_code}"
         row = [team, year, year_max, None, None, None, None, None, None, None, None, None]
@@ -194,6 +198,7 @@ for team in teams:
     elif len(g_finals_med) > 1:
         plt.plot(g_finals_med['Year'], g_finals_med['Median Points scored % Playoffs'], 
                 color=colors[team], linestyle='-.', marker='D', label=f'{team} - Median Finals')
+
 
 plt.legend(title='Legend', loc='upper left', fontsize=6)
 plt.xlabel('Year')
