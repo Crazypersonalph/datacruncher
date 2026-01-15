@@ -155,22 +155,49 @@ teams = df['Team'].unique()
 palette = plt.get_cmap('tab20', len(teams))
 colors = dict(zip(teams, palette(np.linspace(0, 1, len(teams)))))
 
-plt.figure(figsize=(10, 6))
 for team in teams:
     g = df[df['Team'] == team]
-    # Filter out rows where 'Max Points scored % Qualis' is None
-    g = g.dropna(subset=['Max Points scored % Qualis'])
     
-    if len(g) == 1:
-        # Plot as a dot for single year teams
-        plt.scatter(g['Year'], g['Max Points scored % Qualis'], label=team, color=colors[team], s=100)
-    else:
-        # Plot as a line for multi-year teams
-        plt.plot(g['Year'], g['Max Points scored % Qualis'], label=team, color=colors[team], marker='o')
+    # Max Points Qualis (solid line)
+    g_qualis_max = g.dropna(subset=['Max Points scored % Qualis'])
+    if len(g_qualis_max) == 1:
+        plt.scatter(g_qualis_max['Year'], g_qualis_max['Max Points scored % Qualis'], 
+                   color=colors[team], s=100, marker='o', label=f'{team} - Max Qualis')
+    elif len(g_qualis_max) > 1:
+        plt.plot(g_qualis_max['Year'], g_qualis_max['Max Points scored % Qualis'], 
+                color=colors[team], linestyle='-', marker='o', label=f'{team} - Max Qualis')
+    
+    # Median Points Qualis (dotted line)
+    g_qualis_med = g.dropna(subset=['Median Points scored % Qualis'])
+    if len(g_qualis_med) == 1:
+        plt.scatter(g_qualis_med['Year'], g_qualis_med['Median Points scored % Qualis'], 
+                   color=colors[team], s=100, marker='s')
+    elif len(g_qualis_med) > 1:
+        plt.plot(g_qualis_med['Year'], g_qualis_med['Median Points scored % Qualis'], 
+                color=colors[team], linestyle=':', marker='s', label=f'{team} - Median Qualis')
+    
+    # Max Points Finals (dashed line)
+    g_finals_max = g.dropna(subset=['Max Points scored % Playoffs'])
+    if len(g_finals_max) == 1:
+        plt.scatter(g_finals_max['Year'], g_finals_max['Max Points scored % Playoffs'], 
+                   color=colors[team], s=100, marker='^')
+    elif len(g_finals_max) > 1:
+        plt.plot(g_finals_max['Year'], g_finals_max['Max Points scored % Playoffs'], 
+                color=colors[team], linestyle='--', marker='^', label=f'{team} - Max Finals')
+    
+    # Median Points Finals (dashdot line)
+    g_finals_med = g.dropna(subset=['Median Points scored % Playoffs'])
+    if len(g_finals_med) == 1:
+        plt.scatter(g_finals_med['Year'], g_finals_med['Median Points scored % Playoffs'], 
+                   color=colors[team], s=100, marker='D')
+    elif len(g_finals_med) > 1:
+        plt.plot(g_finals_med['Year'], g_finals_med['Median Points scored % Playoffs'], 
+                color=colors[team], linestyle='-.', marker='D', label=f'{team} - Median Finals')
 
-plt.legend(title='Team')
+plt.legend(title='Legend', loc='upper left', fontsize=6)
 plt.xlabel('Year')
-plt.ylabel('Max Points scored % Qualis')
+plt.ylabel('Percentage of Max Points Scored (%)')
+plt.title('Team Performance Comparison')
 plt.tight_layout()
 plt.xticks(range(args.year_range[0], args.year_range[1] + 1))
 plt.yticks(range(0, 101, 10))
