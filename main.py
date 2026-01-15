@@ -3,8 +3,11 @@ from statistics import median
 import dotenv
 import tbapy
 import os
+import argparse
 import pandas as pd
-
+import matplotlib.pyplot as plt
+import matplotlib.cm as cm
+import numpy as np
 
 import model
 
@@ -12,13 +15,35 @@ dotenv.load_dotenv()
 
 tba = tbapy.TBA(os.getenv("X-TBA-AUTH-KEY"))
 
+parser = argparse.ArgumentParser(
+                    prog="Alphons's small FIRST data cruncher",
+                    description='Takes in data from The Blue Alliance API and crunches some numbers.',
+                    epilog='Enjoy')
+parser.add_argument('-t', '--teams', type=str, nargs='+', help='List of team keys to analyze (e.g., frc4788 frc10342)', required=True)
+parser.add_argument('-e', '--eventcode', type=str, help='Event code suffix to analyze (e.g., auwarp for AU Warp)', required=True)
+parser.add_argument('-o', '--output', type=str, help='Output CSV file name', default='warp_data.csv')
+parser.add_argument('--year-range', type=int, nargs=2, help='Year range to analyze (e.g., 2023 2025) inclusive', default=[2023, 2025])
+
+args = parser.parse_args()
+
 df = pd.DataFrame(columns=["Index", "Team", "Year", "Max Alliance Points", "Rank", "Max Points scored % Qualis", "Max Points scored % Playoffs",
                            "Median Points scored % Qualis", "Median Points scored % Playoffs",
                            "OPR", "DPR", "CCWM", "Win Rate"]).set_index("Index")
 
 max_alliance_points: dict[int, int] = {2023: 217, 2024: 192, 2025: 301}
+
 finals: list[model.CompLevel] = [model.CompLevel.f, model.CompLevel.sf, model.CompLevel.ef, model.CompLevel.qf]
 
+def get_year_max(year: int) -> int:
+    leaderboardInsight: list[model.LeaderboardInsight] = cast(list[model.LeaderboardInsight], tba.insights_leaderboards(year))
+    max_value: int = 0
+    for insight in leaderboardInsight:
+        real_insight = model.LeaderboardInsight.model_validate(insight)
+        if real_insight.name == "typed_leaderboard_highest_match_clean_score":
+            for entry in real_insight.data.rankings:
+                if entry.value > max_value:
+                    max_value = int(entry.value)
+    return max_value
 
 def get_team_score(team: str, event: str, comp_level: list[model.CompLevel]) -> list[int]:
     matches: Optional[List[model.Match]] = cast(Optional[List[model.Match]], tba.team_matches(team, event=event))
@@ -71,10 +96,11 @@ def get_team_rank(team: str, event: str) -> Optional[dict[str, int]]:
 #        print("No scores available.")
 #    print()
 
-def team_db(team: str) -> None:
-    for i in range(3):
-        year = 2023 + i
-        event_code = f"{year}auwarp"
+def team_db(team: str, event_specific_code: str) -> None:
+    for i in range(args.year_range[1] - args.year_range[0] + 1):
+        year = args.year_range[0] + i
+
+        event_code = f"{year}{event_specific_code}"
         row = [team, year, max_alliance_points[year], None, None, None, None, None, None, None, None, None]
 
         
@@ -115,12 +141,37 @@ def team_db(team: str) -> None:
                 row[10] = ccwms[team]
 
         df.loc[f"{team}_{year}"] = row
-team_db("frc4788")
-team_db("frc10342")
-team_db("frc7113")
-team_db("frc9975")
-df.to_csv("warp_data.csv")
+
+for team in args.teams:
+    team_db(team, args.eventcode)
+df.to_csv(args.output)
 
 # there is technically an edge case in that it looks 
 # over the past 3 years for all teams 
 # (including off-season, whose numbers may change)
+
+# df columns: ['team', 'x', 'y']
+teams = df['Team'].unique()
+palette = plt.get_cmap('tab20', len(teams))
+colors = dict(zip(teams, palette(np.linspace(0, 1, len(teams)))))
+
+plt.figure(figsize=(10, 6))
+for team in teams:
+    g = df[df['Team'] == team]
+    # Filter out rows where 'Max Points scored % Qualis' is None
+    g = g.dropna(subset=['Max Points scored % Qualis'])
+    
+    if len(g) == 1:
+        # Plot as a dot for single year teams
+        plt.scatter(g['Year'], g['Max Points scored % Qualis'], label=team, color=colors[team], s=100)
+    else:
+        # Plot as a line for multi-year teams
+        plt.plot(g['Year'], g['Max Points scored % Qualis'], label=team, color=colors[team], marker='o')
+
+plt.legend(title='Team')
+plt.xlabel('Year')
+plt.ylabel('Max Points scored % Qualis')
+plt.tight_layout()
+plt.xticks(range(args.year_range[0], args.year_range[1] + 1))
+plt.yticks(range(0, 101, 10))
+plt.show()
