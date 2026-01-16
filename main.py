@@ -25,6 +25,8 @@ parser.add_argument('-t', '--teams', type=str, nargs='+', help='List of team key
 parser.add_argument('-e', '--eventcode', type=str, help='Event code suffix to analyze (e.g., auwarp for AU Warp)', required=True)
 parser.add_argument('-o', '--output', type=str, help='Output CSV file name', default='warp_data.csv')
 parser.add_argument('--year-range', type=int, nargs=2, help='Year range to analyze (e.g., 2023 2025) inclusive', default=[2023, 2025])
+# rank, max_qualis, median_qualis, max_finals, median_finals, opr, dpr, ccwm, win_rate
+parser.add_argument('-s', '--show-plots', type=str, nargs='+', help="Select which plots to show. However, sometimes it doesn't make sense to show different things together. (rank, max_qualis, median_qualis, max_finals, median_finals, opr, dpr, ccwm, win_rate)", default=["max_qualis", "median_qualis", "max_finals", "median_finals"])
 
 args = parser.parse_args()
 
@@ -249,51 +251,121 @@ teams = list(df['Team'].unique())
 palette = plt.get_cmap('tab20', len(teams))
 colors = dict(zip(teams, palette(np.linspace(0, 1, len(teams)))))
 
+series_map = {
+    "rank": {
+        "col": "Rank",
+        "linestyle": "-",
+        "marker": "o",
+        "label": "Rank",
+    },
+    "max_qualis": {
+        "col": "Max Points scored % Qualis",
+        "linestyle": "-",
+        "marker": "o",
+        "label": "Max Points scored as % of total points in Qualifications",
+    },
+    "median_qualis": {
+        "col": "Median Points scored % Qualis",
+        "linestyle": ":",
+        "marker": "s",
+        "label": "Median Points scored as % of total points in Qualifications",
+    },
+    "max_finals": {
+        "col": "Max Points scored % Playoffs",
+        "linestyle": "--",
+        "marker": "^",
+        "label": "Max Points scored as % of total points in Playoffs",
+    },
+    "median_finals": {
+        "col": "Median Points scored % Playoffs",
+        "linestyle": "-.",
+        "marker": "D",
+        "label": "Median Points scored as % of total points in Playoffs",
+    },
+    "opr": {
+        "col": "OPR",
+        "linestyle": "-",
+        "marker": "v",
+        "label": "OPR",
+    },
+    "dpr": {
+        "col": "DPR",
+        "linestyle": ":",
+        "marker": "P",
+        "label": "DPR",
+    },
+    "ccwm": {
+        "col": "CCWM",
+        "linestyle": "--",
+        "marker": "X",
+        "label": "CCWM",
+    },
+    "win_rate": {
+        "col": "Win Rate",
+        "linestyle": "-.",
+        "marker": "*",
+        "label": "Win Rate",
+    },
+}
+
+selected = set(args.show_plots)
+
 for team in teams:
     g = df[df['Team'] == team]
-    
-    # Max Points Qualis (solid line)
-    g_qualis_max = g.dropna(subset=['Max Points scored % Qualis'])
-    if len(g_qualis_max) == 1:
-        plt.scatter(g_qualis_max['Year'], g_qualis_max['Max Points scored % Qualis'], 
-                   color=colors[team], s=100, marker='o', label=f'{team} - Max Qualis')
-    elif len(g_qualis_max) > 1:
-        plt.plot(g_qualis_max['Year'], g_qualis_max['Max Points scored % Qualis'], 
-                color=colors[team], linestyle='-', marker='o', label=f'{team} - Max Qualis')
-    
-    # Median Points Qualis (dotted line)
-    g_qualis_med = g.dropna(subset=['Median Points scored % Qualis'])
-    if len(g_qualis_med) == 1:
-        plt.scatter(g_qualis_med['Year'], g_qualis_med['Median Points scored % Qualis'], 
-                   color=colors[team], s=100, marker='s')
-    elif len(g_qualis_med) > 1:
-        plt.plot(g_qualis_med['Year'], g_qualis_med['Median Points scored % Qualis'], 
-                color=colors[team], linestyle=':', marker='s', label=f'{team} - Median Qualis')
-    
-    # Max Points Finals (dashed line)
-    g_finals_max = g.dropna(subset=['Max Points scored % Playoffs'])
-    if len(g_finals_max) == 1:
-        plt.scatter(g_finals_max['Year'], g_finals_max['Max Points scored % Playoffs'], 
-                   color=colors[team], s=100, marker='^')
-    elif len(g_finals_max) > 1:
-        plt.plot(g_finals_max['Year'], g_finals_max['Max Points scored % Playoffs'], 
-                color=colors[team], linestyle='--', marker='^', label=f'{team} - Max Finals')
-    
-    # Median Points Finals (dashdot line)
-    g_finals_med = g.dropna(subset=['Median Points scored % Playoffs'])
-    if len(g_finals_med) == 1:
-        plt.scatter(g_finals_med['Year'], g_finals_med['Median Points scored % Playoffs'], 
-                   color=colors[team], s=100, marker='D')
-    elif len(g_finals_med) > 1:
-        plt.plot(g_finals_med['Year'], g_finals_med['Median Points scored % Playoffs'], 
-                color=colors[team], linestyle='-.', marker='D', label=f'{team} - Median Finals')
+
+    for key, series in series_map.items():
+        if key not in selected:
+            continue
+
+        col = series["col"]
+        linestyle = series["linestyle"]
+        marker = series["marker"]
+        label = series["label"]
+
+        g_filtered = g.dropna(subset=[col])
+        if len(g_filtered) == 0:
+            continue
+
+        if len(g_filtered) == 1:
+            plt.scatter(
+                g_filtered['Year'],
+                g_filtered[col],
+                color=colors[team],
+                s=50,
+                marker=marker,
+                label=f'{team} - {label}',
+            )
+        else:
+            plt.plot(
+                g_filtered['Year'],
+                g_filtered[col],
+                color=colors[team],
+                linestyle=linestyle,
+                marker=marker,
+                label=f'{team} - {label}',
+            )
 
 
-plt.legend(title='Legend', loc='upper left', fontsize=6, borderpad=1)
+# De-duplicate legend entries
+handles, labels = plt.gca().get_legend_handles_labels()
+unique = dict(zip(labels, handles))
+plt.legend(
+    unique.values(),
+    unique.keys(),
+    title='Legend',
+    loc='upper left',
+    fontsize=6,
+    borderpad=1,
+    handlelength=3.5,
+    handletextpad=0.8,
+    labelspacing=1.0,   # increased vertical spacing
+    columnspacing=1.2,
+    markerscale=1.1,
+)
+
 plt.xlabel('Year')
-plt.ylabel('Percentage of Max Points Scored (%)')
+plt.ylabel('Percentage (%) or Points')
 plt.title(f'Team Performance Comparison - {args.eventcode.upper()}')
 plt.tight_layout()
 plt.xticks(range(args.year_range[0], args.year_range[1] + 1))
-plt.yticks(range(0, 101, 10))
 plt.show()
