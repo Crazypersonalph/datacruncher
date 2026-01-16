@@ -9,6 +9,8 @@ import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 import numpy as np
 
+import warnings
+
 import model
 
 dotenv.load_dotenv()
@@ -102,7 +104,7 @@ def team_db(team: str, event_specific_code: str) -> None:
 
         year_max = get_year_max(year)
         if year_max is None:
-            print(f"Warning: No max score data available for year {year}. Using fallback value of 100.")
+            warnings.warn(f"No max score data available for year {year}. Using fallback value of 100.", UserWarning, stacklevel=90)
             year_max = 100  # Fallback to 100 if no data is available
 
         event_code = f"{year}{event_specific_code}"
@@ -149,7 +151,7 @@ def team_db(team: str, event_specific_code: str) -> None:
 
 for team in args.teams:
     team_db(team, args.eventcode)
-df.to_csv(args.output)
+df.to_csv(args.output, na_rep="")
 
 # there is technically an edge case in that it looks 
 # over the past 3 years for all teams 
@@ -200,10 +202,10 @@ for team in teams:
                 color=colors[team], linestyle='-.', marker='D', label=f'{team} - Median Finals')
 
 
-plt.legend(title='Legend', loc='upper left', fontsize=6)
+plt.legend(title='Legend', loc='upper left', fontsize=6, borderpad=1)
 plt.xlabel('Year')
 plt.ylabel('Percentage of Max Points Scored (%)')
-plt.title('Team Performance Comparison')
+plt.title(f'Team Performance Comparison - {args.eventcode.upper()}')
 plt.tight_layout()
 plt.xticks(range(args.year_range[0], args.year_range[1] + 1))
 plt.yticks(range(0, 101, 10))
