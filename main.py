@@ -124,7 +124,6 @@ def get_team_score(team: str, event: str, comp_level: list[model.CompLevel]) -> 
     return scores
 
 def get_team_rank(team: str, event: str) -> Optional[dict[str, int]]:
-    print(tba_event_teams(event, status=False))
     if event not in _event_status_cache:
         _event_status_cache[event] = cast(
             Optional[dict[str, Optional[model.TeamEventStatus]]],
