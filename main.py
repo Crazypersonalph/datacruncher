@@ -313,6 +313,21 @@ series_map = {
 
 selected = set(args.show_plots)
 
+# Keep a consistent aspect ratio while allowing responsive scaling
+plot_aspect = 16 / 9
+fig_width = 12
+fig_height = fig_width / plot_aspect
+
+fig = plt.figure(figsize=(fig_width, fig_height), constrained_layout=True)
+gs = fig.add_gridspec(1, 2, width_ratios=[1, 0.25])
+ax = fig.add_subplot(gs[0, 0])
+ax_leg = fig.add_subplot(gs[0, 1])
+ax_leg.axis("off")
+
+# Enforce aspect ratio on the main plot area
+ax.set_box_aspect(1 / plot_aspect)
+
+
 for team in teams:
     g = df[df['Team'] == team]
 
@@ -330,7 +345,7 @@ for team in teams:
             continue
 
         if len(g_filtered) == 1:
-            plt.scatter(
+            ax.scatter(
                 g_filtered['Year'],
                 g_filtered[col],
                 color=colors[team],
@@ -339,7 +354,7 @@ for team in teams:
                 label=f'{team} - {label}',
             )
         else:
-            plt.plot(
+            ax.plot(
                 g_filtered['Year'],
                 g_filtered[col],
                 color=colors[team],
@@ -350,14 +365,16 @@ for team in teams:
 
 
 # De-duplicate legend entries
-handles, labels = plt.gca().get_legend_handles_labels()
+handles, labels = ax.get_legend_handles_labels()
 unique = dict(zip(labels, handles))
-plt.legend(
+
+ax_leg.legend(
     unique.values(),
     unique.keys(),
     title='Legend',
-    loc='upper left',
-    fontsize=6,
+    loc='upper center',
+    bbox_to_anchor=(0.5, 1.0),
+    fontsize=5,
     borderpad=1,
     handlelength=3.5,
     handletextpad=0.8,
@@ -366,9 +383,8 @@ plt.legend(
     markerscale=1.1,
 )
 
-plt.xlabel('Year')
-plt.ylabel('Percentage (%) or Points')
-plt.title(f'Team Performance Comparison - {args.eventcode.upper()}')
-plt.tight_layout()
-plt.xticks(range(args.year_range[0], args.year_range[1] + 1))
+ax.set_xlabel('Year')
+ax.set_ylabel('Percentage (%) or Points')
+ax.set_title(f'Team Performance Comparison - {args.eventcode.upper()}')
+ax.set_xticks(range(args.year_range[0], args.year_range[1] + 1))
 plt.show()
