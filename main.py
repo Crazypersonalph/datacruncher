@@ -1,7 +1,7 @@
 from typing import List, Optional, cast, Iterable
 from statistics import median
 import dotenv
-import tbapy
+import tbapy.tbapy as tbapy
 import os
 import argparse
 import pandas as pd
@@ -59,7 +59,10 @@ def tba_insights_leaderboards(year: int):
 def tba_event_teams(event: str, *, status: bool = True):
     logging.info("TBA call start: event_teams event=%s status=%s", event, status)
     t0 = time.perf_counter()
-    result = tba.event_teams(event, status=status)
+    if status:
+        result = tba._get(f'event/{event}/teams/statuses')
+    else:
+        result = tba.event_teams(event=event)
     logging.info("TBA call end: event_teams (%.3fs)", time.perf_counter() - t0)
     return result
 
@@ -121,6 +124,7 @@ def get_team_score(team: str, event: str, comp_level: list[model.CompLevel]) -> 
     return scores
 
 def get_team_rank(team: str, event: str) -> Optional[dict[str, int]]:
+    print(tba_event_teams(event, status=False))
     if event not in _event_status_cache:
         _event_status_cache[event] = cast(
             Optional[dict[str, Optional[model.TeamEventStatus]]],
